@@ -23,36 +23,38 @@ export const getUserById = async (req, res) => {
     }
 };
 
-// Registrar un nuevo usuario
+// Registrar un nuevo usuario(2)
 export const registerUser = async (req, res) => {
     try {
-        const { first_name, last_name, email, age, password } = req.body;
+        const { first_name, last_name, email, age, password, role } = req.body;
 
-        // Verifica si el usuario ya existe
+        // Revisar si ya existe el email
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             return res.status(400).json({ message: "El email ya está registrado" });
         }
 
-        // Encripta la contraseña
+        // Hashear la contraseña
         const hashedPassword = hashPassword(password);
 
-        // Crea el usuario en la DB
+        // Asignar rol: Si se envía un rol válido, usarlo; si no, poner 'user'
         const newUser = new User({
             first_name,
             last_name,
             email,
             age,
             password: hashedPassword,
+            role: role === "admin" ? "admin" : "user", // Solo permite "admin" si se envía explícitamente
         });
 
         await newUser.save();
-        res.status(201).json({ message: "Usuario registrado con éxito" });
+        res.status(201).json({ message: "Usuario registrado con éxito", user: newUser });
 
     } catch (error) {
         res.status(500).json({ message: "Error al registrar usuario", error });
     }
 };
+
 
 // Actualizar usuario
 export const updateUser = async (req, res) => {
