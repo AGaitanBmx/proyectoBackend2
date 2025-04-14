@@ -1,5 +1,6 @@
 import User from "../models/user.model.js";
 import { hashPassword } from "../utils/bcrypt.js";
+import Cart from "../models/cart.model.js";
 
 // Obtener todos los usuarios
 export const getUsers = async (req, res) => {
@@ -23,36 +24,38 @@ export const getUserById = async (req, res) => {
     }
 };
 
-// Registrar un nuevo usuario(2)
+// Registrar un nuevo usuario
 export const registerUser = async (req, res) => {
     try {
         const { first_name, last_name, email, age, password, role } = req.body;
-
-        // Revisar si ya existe el email
+    
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             return res.status(400).json({ message: "El email ya está registrado" });
         }
-
-        // Hashear la contraseña
+    
         const hashedPassword = hashPassword(password);
-
-        // Asignar rol: Si se envía un rol válido, usarlo; si no, poner 'user'
+    
+        // Crear carrito vacío
+        const newCart = new Cart({ products: [] });
+        await newCart.save();
+    
+        // Crear usuario con referencia al carrito
         const newUser = new User({
             first_name,
             last_name,
             email,
             age,
             password: hashedPassword,
-            role: role === "admin" ? "admin" : "user", // Solo permite "admin" si se envía explícitamente
+            role: role === "admin" ? "admin" : "user",
+            cart: newCart._id
         });
-
+    
         await newUser.save();
-        res.status(201).json({ message: "Usuario registrado con éxito", user: newUser });
-
-    } catch (error) {
+        res.status(201).json({ message: "Usuario registrado con carrito", user: newUser });
+        } catch (error) {
         res.status(500).json({ message: "Error al registrar usuario", error });
-    }
+        }
 };
 
 
