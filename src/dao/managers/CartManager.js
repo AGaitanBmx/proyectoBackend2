@@ -1,5 +1,5 @@
 import { CartModel } from "../models/Cart.js";
-
+import { v4 as uuidv4 } from "uuid";
 export class CartManager {
   
   async createCart() {
@@ -107,4 +107,45 @@ export class CartManager {
       throw new Error("Error al eliminar el carrito");
     }
   }
+
+  //purchase de tikcets
+  async purchaseCart(cartId, userEmail) {
+  const cart = await this.getCartById(cartId);
+  if (!cart) throw new Error("Carrito no encontrado");
+
+  const productsToPurchase = [];
+  const productsWithoutStock = [];
+  let totalAmount = 0;
+
+  for (const item of cart.products) {
+    const product = await this.productModel.findById(item.product);
+
+    if (product.stock >= item.quantity) {
+      // Descontar stock
+      product.stock -= item.quantity;
+      await product.save();
+
+      totalAmount += product.price * item.quantity;
+      productsToPurchase.push(item);
+    } else {
+      productsWithoutStock.push(item);
+    }
+  }
+
+  // Generar ticket
+  const ticket = await TicketModel.create({
+    code: uuidv4(),
+    amount: totalAmount,
+    purchaser: userEmail
+  });
+
+  // Actualizar carrito con los productos no comprados
+  cart.products = productsWithoutStock;
+  await cart.save();
+
+  return {
+    ticket,
+    productsNotProcessed: productsWithoutStock
+  };
+}
 }

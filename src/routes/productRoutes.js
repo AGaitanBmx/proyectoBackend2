@@ -8,8 +8,20 @@ import {
 } from "../controllers/productController.js";
 import { authMiddleware } from "../middlewares/auth.js";
 import { authorize } from "../middlewares/authMiddleware.js";
+import { ProductManager } from "../dao/managers/ProductManager.js";
 
 const router = Router();
+const productManager = new ProductManager();
+
+//vista de productos
+router.get('/view', async (req, res) => {
+  try {
+    const products = await productManager.getAll();
+    res.render('products', { title: 'Productos', products });
+  } catch (error) {
+    res.status(500).send('Error al cargar productos');
+  }
+});
 
 router.get("/", getProducts);
 router.get("/:pid", getProductById);

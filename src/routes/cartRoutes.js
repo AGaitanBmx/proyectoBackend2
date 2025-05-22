@@ -33,7 +33,7 @@ router.get("/:cid", authMiddleware, async (req, res) => {
 });
 
 // Agregar un producto al carrito
-router.post("/:cid/products/:pid", authMiddleware, async (req, res) => {
+router.post("/:cid/products/:pid", authMiddleware, authorize(["user"]), async (req, res) => {
   try {
     const { cid, pid } = req.params;
     const { quantity } = req.body;
@@ -47,7 +47,7 @@ router.post("/:cid/products/:pid", authMiddleware, async (req, res) => {
 });
 
 // Actualizar cantidad de un producto en el carrito
-router.put("/:cid/products/:pid", authMiddleware, async (req, res) => {
+router.put("/:cid/products/:pid", authMiddleware, authorize(["user"]), async (req, res) => {
   try {
     const { cid, pid } = req.params;
     const { quantity } = req.body;
@@ -61,7 +61,7 @@ router.put("/:cid/products/:pid", authMiddleware, async (req, res) => {
 });
 
 // Eliminar un producto del carrito
-router.delete("/:cid/products/:pid", authMiddleware, async (req, res) => {
+router.delete("/:cid/products/:pid", authMiddleware, authorize(["user"]), async (req, res) => {
   try {
     const { cid, pid } = req.params;
 
@@ -74,7 +74,7 @@ router.delete("/:cid/products/:pid", authMiddleware, async (req, res) => {
 });
 
 // Vaciar el carrito
-router.delete("/:cid", authMiddleware, async (req, res) => {
+router.delete("/:cid", authMiddleware, authorize(["user"]), async (req, res) => {
   try {
     const { cid } = req.params;
 
@@ -83,6 +83,24 @@ router.delete("/:cid", authMiddleware, async (req, res) => {
   } catch (error) {
     console.error("Error al vaciar el carrito:", error);
     res.status(500).json({ message: "Error al vaciar el carrito" });
+  }
+});
+
+router.post("/:cid/purchase", authMiddleware, authorize(["user"]), async (req, res) => {
+  try {
+    const { cid } = req.params;
+    const userEmail = req.user.email;
+
+    const result = await cartManager.purchaseCart(cid, userEmail);
+
+    res.json({
+      message: "Compra procesada",
+      ticket: result.ticket,
+      productosNoProcesados: result.productsNotProcessed
+    });
+  } catch (error) {
+    console.error("Error en compra:", error);
+    res.status(500).json({ error: "Error al procesar la compra" });
   }
 });
 

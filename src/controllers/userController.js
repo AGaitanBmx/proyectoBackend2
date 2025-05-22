@@ -1,11 +1,11 @@
-import User from "../models/user.model.js";
-import { hashPassword } from "../utils/bcrypt.js";
-import Cart from "../models/cart.model.js";
+import { UserModel } from "../dao/models/User.js";
+import { hashPassword, comparePassword } from "../utils/bcrypt.js";
+import { CartModel } from "../dao/models/Cart.js";
 
 // Obtener todos los usuarios
 export const getUsers = async (req, res) => {
     try {
-        const users = await User.find();
+        const users = await UserModel.find();
         res.json(users);
     } catch (error) {
         res.status(500).json({ message: "Error al obtener usuarios", error });
@@ -15,7 +15,7 @@ export const getUsers = async (req, res) => {
 // Obtener un usuario por ID
 export const getUserById = async (req, res) => {
     try {
-        const user = await User.findById(req.params.id);
+        const user = await UserModel.findById(req.params.id);
         if (!user) return res.status(404).json({ message: "Usuario no encontrado" });
 
         res.json(user);
@@ -28,20 +28,20 @@ export const getUserById = async (req, res) => {
 export const registerUser = async (req, res) => {
     try {
         const { first_name, last_name, email, age, password, role } = req.body;
-    
-        const existingUser = await User.findOne({ email });
+
+        const existingUser = await UserModel.findOne({ email });
         if (existingUser) {
             return res.status(400).json({ message: "El email ya está registrado" });
         }
-    
+
         const hashedPassword = hashPassword(password);
-    
+
         // Crear carrito vacío
-        const newCart = new Cart({ products: [] });
+        const newCart = new CartModel({ products: [] });
         await newCart.save();
-    
+
         // Crear usuario con referencia al carrito
-        const newUser = new User({
+        const newUser = new UserModel({
             first_name,
             last_name,
             email,
@@ -50,19 +50,43 @@ export const registerUser = async (req, res) => {
             role: role === "admin" ? "admin" : "user",
             cart: newCart._id
         });
-    
+
         await newUser.save();
         res.status(201).json({ message: "Usuario registrado con carrito", user: newUser });
-        } catch (error) {
+    } catch (error) {
         res.status(500).json({ message: "Error al registrar usuario", error });
+    }
+};
+
+export const loginUser = async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        // Verificar si el usuario existe
+        const user = await UserModel.findOne({ email });
+        if (!user) {
+            return res.status(401).json({ message: "Usuario no encontrado" });
         }
+
+        // Comparar contraseñas
+        const isMatch = comparePassword(password, user.password);
+        if (!isMatch) {
+            return res.status(401).json({ message: "Contraseña incorrecta" });
+        }
+
+        // Opcional: si usás JWT, podés generar un token acá
+
+        return res.status(200).json({ message: "Login exitoso", user });
+    } catch (error) {
+        res.status(500).json({ message: "Error al iniciar sesión", error });
+    }
 };
 
 
 // Actualizar usuario
 export const updateUser = async (req, res) => {
     try {
-        const updatedUser = await User.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const updatedUser = await UserModel.findByIdAndUpdate(req.params.id, req.body, { new: true });
 
         if (!updatedUser) return res.status(404).json({ message: "Usuario no encontrado" });
 
@@ -75,7 +99,7 @@ export const updateUser = async (req, res) => {
 // Eliminar usuario
 export const deleteUser = async (req, res) => {
     try {
-        const deletedUser = await User.findByIdAndDelete(req.params.id);
+        const deletedUser = await UserModel.findByIdAndDelete(req.params.id);
         if (!deletedUser) return res.status(404).json({ message: "Usuario no encontrado" });
 
         res.json({ message: "Usuario eliminado con éxito" });

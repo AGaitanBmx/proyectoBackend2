@@ -7,8 +7,13 @@ import passport from 'passport';
 import initializePassport from './config/passport.js';
 import productRoutes from "./routes/productRoutes.js";
 import cookieParser from 'cookie-parser';
+import { engine } from 'express-handlebars';
 
 const app = express();
+
+app.engine('handlebars', engine());
+app.set('view engine', 'handlebars');
+app.set('views', './src/views');
 
 // Middlewares
 app.use(express.json());
@@ -16,6 +21,10 @@ app.use(cookieParser());
 // Passport
 initializePassport();
 app.use(passport.initialize());
+
+//handlebars
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
 // Rutas
 app.use('/api/users', userRoutes);
