@@ -1,14 +1,7 @@
 import { Router } from "express";
 import { userRepository } from "../repositories.js";
-import { registerUser, loginUser } from "../controllers/userController.js";
 
 const router = Router();
-
-// Registro con encriptado y creación de carrito
-router.post("/register", registerUser);
-
-// Login con verificación de contraseña
-router.post("/login", loginUser);
 
 // Obtener todos los usuarios
 router.get("/", async (req, res) => {

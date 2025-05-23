@@ -1,5 +1,6 @@
 import { CartModel } from "../models/Cart.js";
 import { v4 as uuidv4 } from "uuid";
+import { TicketModel } from "../models/Ticket.js";
 export class CartManager {
   
   async createCart() {

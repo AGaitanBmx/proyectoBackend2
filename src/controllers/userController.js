@@ -24,65 +24,6 @@ export const getUserById = async (req, res) => {
     }
 };
 
-// Registrar un nuevo usuario
-export const registerUser = async (req, res) => {
-    try {
-        const { first_name, last_name, email, age, password, role } = req.body;
-
-        const existingUser = await UserModel.findOne({ email });
-        if (existingUser) {
-            return res.status(400).json({ message: "El email ya está registrado" });
-        }
-
-        const hashedPassword = hashPassword(password);
-
-        // Crear carrito vacío
-        const newCart = new CartModel({ products: [] });
-        await newCart.save();
-
-        // Crear usuario con referencia al carrito
-        const newUser = new UserModel({
-            first_name,
-            last_name,
-            email,
-            age,
-            password: hashedPassword,
-            role: role === "admin" ? "admin" : "user",
-            cart: newCart._id
-        });
-
-        await newUser.save();
-        res.status(201).json({ message: "Usuario registrado con carrito", user: newUser });
-    } catch (error) {
-        res.status(500).json({ message: "Error al registrar usuario", error });
-    }
-};
-
-export const loginUser = async (req, res) => {
-    try {
-        const { email, password } = req.body;
-
-        // Verificar si el usuario existe
-        const user = await UserModel.findOne({ email });
-        if (!user) {
-            return res.status(401).json({ message: "Usuario no encontrado" });
-        }
-
-        // Comparar contraseñas
-        const isMatch = comparePassword(password, user.password);
-        if (!isMatch) {
-            return res.status(401).json({ message: "Contraseña incorrecta" });
-        }
-
-        // Opcional: si usás JWT, podés generar un token acá
-
-        return res.status(200).json({ message: "Login exitoso", user });
-    } catch (error) {
-        res.status(500).json({ message: "Error al iniciar sesión", error });
-    }
-};
-
-
 // Actualizar usuario
 export const updateUser = async (req, res) => {
     try {

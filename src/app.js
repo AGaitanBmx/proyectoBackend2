@@ -18,6 +18,7 @@ app.set('views', './src/views');
 // Middlewares
 app.use(express.json());
 app.use(cookieParser());
+
 // Passport
 initializePassport();
 app.use(passport.initialize());
