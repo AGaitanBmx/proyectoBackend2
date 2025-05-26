@@ -1,7 +1,11 @@
 import { CartModel } from "../models/Cart.js";
 import { v4 as uuidv4 } from "uuid";
 import { TicketModel } from "../models/Ticket.js";
+import { ProductModel } from "../models/Product.js"; // 👈 AGREGA ESTA LÍNEA
 export class CartManager {
+  constructor() {
+    this.productModel = ProductModel; // 👈 AGREGA ESTA LÍNEA
+  }
   
   async createCart() {
     try {
@@ -111,42 +115,44 @@ export class CartManager {
 
   //purchase de tikcets
   async purchaseCart(cartId, userEmail) {
-  const cart = await this.getCartById(cartId);
-  if (!cart) throw new Error("Carrito no encontrado");
+    const cart = await this.getCartById(cartId);
+    if (!cart) throw new Error("Carrito no encontrado");
 
-  const productsToPurchase = [];
-  const productsWithoutStock = [];
-  let totalAmount = 0;
+    const productsToPurchase = [];
+    const productsWithoutStock = [];
+    let totalAmount = 0;
 
-  for (const item of cart.products) {
-    const product = await this.productModel.findById(item.product);
+    for (const item of cart.products) {
+      const product = await this.productModel.findById(item.productId);
 
-    if (product.stock >= item.quantity) {
-      // Descontar stock
-      product.stock -= item.quantity;
-      await product.save();
+      if (!product) {
+        console.log("Producto no encontrado en BD:", item.product);
+        continue;
+      }
 
-      totalAmount += product.price * item.quantity;
-      productsToPurchase.push(item);
-    } else {
-      productsWithoutStock.push(item);
+      if (product.stock >= item.quantity) {
+        product.stock -= item.quantity;
+        await product.save();
+
+        totalAmount += product.price * item.quantity;
+        productsToPurchase.push(item);
+      } else {
+        productsWithoutStock.push(item);
+      }
     }
-  }
 
-  // Generar ticket
-  const ticket = await TicketModel.create({
-    code: uuidv4(),
-    amount: totalAmount,
-    purchaser: userEmail
-  });
+    const ticket = await TicketModel.create({
+      code: uuidv4(),
+      amount: totalAmount,
+      purchaser: userEmail,
+    });
 
-  // Actualizar carrito con los productos no comprados
-  cart.products = productsWithoutStock;
-  await cart.save();
+    cart.products = productsWithoutStock;
+    await cart.save();
 
-  return {
-    ticket,
-    productsNotProcessed: productsWithoutStock
-  };
-}
+    return {
+      ticket,
+      productsNotProcessed: productsWithoutStock,
+    };
+}   
 }
