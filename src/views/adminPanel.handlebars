@@ -1,3 +1,4 @@
+<head>
 <style>
   .admin-container {
     max-width: 1200px;
@@ -129,6 +130,11 @@
     gap: 0.5rem;
   }
 </style>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+  
+  <!-- Incluir SweetAlert2 JS -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
 
 <div class="admin-container">
   <h1 class="admin-title">Panel de Administración</h1>
@@ -158,6 +164,13 @@
       <textarea id="description" class="form-control" rows="3" placeholder="Descripción detallada"></textarea>
     </div>
     <div class="form-group">
+  <label for="status">Estado</label>
+  <select id="status" class="form-control">
+    <option value="true">Activo</option>
+    <option value="false">Inactivo</option>
+  </select>
+</div>
+    <div class="form-group">
       <label for="thumbnail">Imagen (URL)</label>
       <input type="text" id="thumbnail" class="form-control" placeholder="https://ejemplo.com/imagen.jpg">
     </div>
@@ -184,58 +197,60 @@
 </div>
 
 <script>
-  // Función para agregar producto
-  async function addProduct() {
-    const product = {
-      title: document.getElementById('title').value,
-      description: document.getElementById('description').value,
-      price: parseFloat(document.getElementById('price').value),
-      category: document.getElementById('category').value,
-      stock: parseInt(document.getElementById('stock').value),
-      thumbnail: document.getElementById('thumbnail').value || undefined
-    };
+  // Configuración base
+  const API_BASE_URL = '/api/products';
+  const authToken = localStorage.getItem('token') || '';
 
+  // Headers comunes
+  const commonHeaders = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${authToken}`
+  };
+
+  // Función para manejar errores
+  async function handleResponse(response) {
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Error en la solicitud');
+    }
+    return response.json();
+  }
+
+  // Agregar producto
+  async function addProduct() {
     try {
-      const response = await fetch('/api/products', {
+      const product = {
+        title: document.getElementById('title').value,
+        description: document.getElementById('description').value,
+        price: parseFloat(document.getElementById('price').value),
+        category: document.getElementById('category').value,
+        stock: parseInt(document.getElementById('stock').value),
+        thumbnail: document.getElementById('thumbnail').value || '',
+        status: document.getElementById('status').value === 'true'
+      };
+
+      const response = await fetch(API_BASE_URL, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
-        },
+        headers: commonHeaders,
         body: JSON.stringify(product)
       });
 
-      const data = await response.json();
+      const data = await handleResponse(response);
 
-      if (!response.ok) {
-        throw new Error(data.message || 'Error al agregar producto');
-      }
-
-      await Swal.fire({
-        icon: 'success',
-        title: '¡Producto agregado!',
-        text: 'El producto se ha añadido correctamente',
-        confirmButtonColor: '#4a90e2'
-      });
-      
+      await Swal.fire('¡Éxito!', 'Producto agregado correctamente', 'success');
       location.reload();
     } catch (error) {
       console.error('Error:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: error.message || 'No se pudo agregar el producto',
-        confirmButtonColor: '#e74c3c'
-      });
+      Swal.fire('Error', error.message, 'error');
     }
   }
 
-  // Función para eliminar producto
+  // Eliminar producto
   async function deleteProduct(id) {
     try {
       const result = await Swal.fire({
         title: '¿Estás seguro?',
-        text: "¡No podrás revertir esto!",
+        text: "Esta acción no se puede deshacer",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#4a90e2',
@@ -246,105 +261,146 @@
 
       if (!result.isConfirmed) return;
 
-      const response = await fetch(`/api/products/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/${id}`, {
         method: 'DELETE',
-        headers: { 
-          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
-        }
+        headers: commonHeaders
       });
 
-      const data = await response.json();
+      await handleResponse(response);
 
-      if (!response.ok) {
-        throw new Error(data.message || 'Error al eliminar producto');
-      }
-
-      await Swal.fire({
-        icon: 'success',
-        title: '¡Eliminado!',
-        text: 'El producto ha sido eliminado',
-        confirmButtonColor: '#4a90e2'
-      });
-      
+      await Swal.fire('¡Eliminado!', 'El producto fue eliminado', 'success');
       location.reload();
     } catch (error) {
       console.error('Error:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: error.message || 'No se pudo eliminar el producto',
-        confirmButtonColor: '#e74c3c'
-      });
+      Swal.fire('Error', error.message, 'error');
     }
   }
 
-  // Función para editar producto
-  async function editProductPrompt(id) {
-    try {
-      // Primero obtenemos el producto actual
-      const response = await fetch(`/api/products/${id}`);
-      const product = await response.json();
+  // Editar producto
+async function editProductPrompt(id) {
+  try {
+    // Obtener producto actual
+    const response = await fetch(`${API_BASE_URL}/${id}`);
+    const product = await handleResponse(response);
 
-      if (!response.ok) {
-        throw new Error(product.message || 'Error al obtener producto');
+    // Configuración del modal mejorado
+    const { value: formValues } = await Swal.fire({
+      title: `<h3 style="color: #4a90e2">Editando: <strong>${product.title}</strong></h3>`,
+      html: `
+        <div style="text-align: left; margin-bottom: 1rem;">
+          <p style="margin-bottom: 0.5rem; font-weight: 500;">Complete los campos a editar:</p>
+        </div>
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label style="display: block; margin-bottom: 0.3rem; font-weight: 500;">Título</label>
+          <input id="swal-title" class="swal2-input" value="${product.title}" placeholder="Nuevo título">
+        </div>
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label style="display: block; margin-bottom: 0.3rem; font-weight: 500;">Descripción</label>
+          <textarea id="swal-description" class="swal2-input" style="height: 80px; resize: vertical;" 
+            placeholder="Nueva descripción">${product.description}</textarea>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div class="form-group">
+            <label style="display: block; margin-bottom: 0.3rem; font-weight: 500;">Precio ($)</label>
+            <input id="swal-price" class="swal2-input" type="number" step="0.01" value="${product.price}">
+          </div>
+          <div class="form-group">
+            <label style="display: block; margin-bottom: 0.3rem; font-weight: 500;">Stock</label>
+            <input id="swal-stock" class="swal2-input" type="number" value="${product.stock}">
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div class="form-group">
+            <label style="display: block; margin-bottom: 0.3rem; font-weight: 500;">Categoría</label>
+            <input id="swal-category" class="swal2-input" value="${product.category}">
+          </div>
+          <div class="form-group">
+            <label style="display: block; margin-bottom: 0.3rem; font-weight: 500;">Estado</label>
+            <select id="swal-status" class="swal2-input" style="width: 100%; padding: 0.5em;">
+              <option value="true" ${product.status ? 'selected' : ''}>Activo</option>
+              <option value="false" ${!product.status ? 'selected' : ''}>Inactivo</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label style="display: block; margin-bottom: 0.3rem; font-weight: 500;">Imagen (URL)</label>
+          <input id="swal-thumbnail" class="swal2-input" value="${product.thumbnail || ''}">
+        </div>
+      `,
+      width: '700px',
+      padding: '2rem',
+      background: '#ffffff',
+      backdrop: `
+        rgba(0,0,0,0.4)
+        url("/images/loading.gif")
+        center left
+        no-repeat
+      `,
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: 'Guardar Cambios',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#4a90e2',
+      cancelButtonColor: '#e74c3c',
+      customClass: {
+        container: 'custom-swal-container',
+        popup: 'custom-swal-popup',
+        header: 'custom-swal-header',
+        title: 'custom-swal-title',
+        closeButton: 'custom-swal-close-button',
+        content: 'custom-swal-content',
+        input: 'custom-swal-input',
+        actions: 'custom-swal-actions',
+        confirmButton: 'custom-swal-confirm-button',
+        cancelButton: 'custom-swal-cancel-button'
+      },
+      preConfirm: () => {
+        return {
+          title: document.getElementById('swal-title').value,
+          description: document.getElementById('swal-description').value,
+          price: parseFloat(document.getElementById('swal-price').value),
+          stock: parseInt(document.getElementById('swal-stock').value),
+          category: document.getElementById('swal-category').value,
+          thumbnail: document.getElementById('swal-thumbnail').value,
+          status: document.getElementById('swal-status').value === 'true'
+        };
       }
+    });
 
-      const { value: formValues } = await Swal.fire({
-        title: 'Editar Producto',
-        html:
-          `<input id="swal-title" class="swal2-input" placeholder="Título" value="${product.title}">
-           <input id="swal-description" class="swal2-input" placeholder="Descripción" value="${product.description || ''}">
-           <input id="swal-price" class="swal2-input" placeholder="Precio" type="number" value="${product.price}">
-           <input id="swal-stock" class="swal2-input" placeholder="Stock" type="number" value="${product.stock}">
-           <input id="swal-category" class="swal2-input" placeholder="Categoría" value="${product.category || ''}">`,
-        focusConfirm: false,
-        showCancelButton: true,
-        confirmButtonColor: '#4a90e2',
-        cancelButtonColor: '#e74c3c',
-        preConfirm: () => {
-          return {
-            title: document.getElementById('swal-title').value,
-            description: document.getElementById('swal-description').value,
-            price: parseFloat(document.getElementById('swal-price').value),
-            stock: parseInt(document.getElementById('swal-stock').value),
-            category: document.getElementById('swal-category').value
-          };
-        }
-      });
+    if (!formValues) return;
 
-      if (!formValues) return;
-
-      const updateResponse = await fetch(`/api/products/${id}`, {
-        method: 'PUT',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
-        },
-        body: JSON.stringify(formValues)
-      });
-
-      const data = await updateResponse.json();
-
-      if (!updateResponse.ok) {
-        throw new Error(data.message || 'Error al actualizar producto');
-      }
-
-      await Swal.fire({
-        icon: 'success',
-        title: '¡Actualizado!',
-        text: 'El producto se ha actualizado correctamente',
-        confirmButtonColor: '#4a90e2'
-      });
-      
-      location.reload();
-    } catch (error) {
-      console.error('Error:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: error.message || 'No se pudo actualizar el producto',
-        confirmButtonColor: '#e74c3c'
-      });
+    // Validación básica
+    if (!formValues.title || !formValues.price || !formValues.stock) {
+      throw new Error('Título, precio y stock son campos requeridos');
     }
+
+    // Actualizar producto
+    const updateResponse = await fetch(`${API_BASE_URL}/${id}`, {
+      method: 'PUT',
+      headers: commonHeaders,
+      body: JSON.stringify(formValues)
+    });
+
+    await handleResponse(updateResponse);
+
+    await Swal.fire({
+      position: 'center',
+      icon: 'success',
+      title: '¡Producto actualizado!',
+      showConfirmButton: false,
+      timer: 1500,
+      timerProgressBar: true,
+      willClose: () => location.reload()
+    });
+    
+  } catch (error) {
+    console.error('Error:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error al actualizar',
+      text: error.message || 'No se pudo actualizar el producto',
+      confirmButtonColor: '#e74c3c'
+    });
   }
+}
 </script>
