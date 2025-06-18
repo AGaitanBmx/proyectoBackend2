@@ -36,10 +36,27 @@ router.get("/:cid", authMiddleware, async (req, res) => {
 router.post("/:cid/products/:pid", authMiddleware, authorize(["user"]), async (req, res) => {
   try {
     const { cid, pid } = req.params;
-    const { quantity } = req.body;
+    let { quantity } = req.body;
 
+    // Asegura que la cantidad sea al menos 1 si no se especifica o es inválida
+    quantity = parseInt(quantity) > 0 ? parseInt(quantity) : 1;
+
+    // Verifica que el carrito exista
+    const cart = await cartManager.getCartById(cid);
+    if (!cart) {
+      return res.status(404).json({ message: "El carrito no existe" });
+    }
+
+    // Verifica que el producto exista
+    const product = await cartManager.productModel.findById(pid);
+    if (!product) {
+      return res.status(404).json({ message: "El producto no existe" });
+    }
+
+    // Agrega el producto al carrito
     const updatedCart = await cartManager.addProductToCart(cid, pid, quantity);
-    res.json(updatedCart);
+    
+    res.json({ message: "Producto agregado al carrito", cart: updatedCart });
   } catch (error) {
     console.error("Error al agregar producto al carrito:", error);
     res.status(500).json({ message: "Error al agregar producto al carrito" });
@@ -62,14 +79,28 @@ router.put("/:cid/products/:pid", authMiddleware, authorize(["user"]), async (re
 
 // Eliminar un producto del carrito
 router.delete("/:cid/products/:pid", authMiddleware, authorize(["user"]), async (req, res) => {
-  try {
+ try {
     const { cid, pid } = req.params;
+    const cart = await cartManager.removeProductFromCart(cid, pid);
+    
+    if (!cart) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Carrito no encontrado'
+      });
+    }
 
-    const updatedCart = await cartManager.removeProductFromCart(cid, pid);
-    res.json(updatedCart);
+    res.json({
+      success: true,
+      message: 'Producto eliminado del carrito',
+      cart // Opcional: enviar el carrito actualizado
+    });
+    
   } catch (error) {
-    console.error("Error al eliminar producto del carrito:", error);
-    res.status(500).json({ message: "Error al eliminar producto del carrito" });
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 });
 

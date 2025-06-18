@@ -38,7 +38,11 @@ router.post("/register", async (req, res) => {
         });
 
         await newUser.save();
-        res.status(201).json({ message: "Usuario registrado con carrito", user: newUser });
+if (req.headers.accept && req.headers.accept.includes("application/json")) {
+  res.status(201).json({ message: "Usuario registrado con carrito", user: newUser });
+} else {
+  res.redirect("/login");
+}
     } catch (error) {
         res.status(500).json({ message: "Error al registrar usuario", error });
     }
@@ -57,7 +61,11 @@ router.post("/login", async (req, res) => {
         const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "1h" });
         res.cookie("token", token, { httpOnly: true });
 
-        res.json({ message: "Login exitoso", token });
+        if (req.headers.accept && req.headers.accept.includes("application/json")) {
+  res.status(200).json({ message: "Login exitoso", token });
+} else {
+  res.redirect("/");
+}
     } catch (error) {
         console.error("ERROR EN LOGIN:", error);
         res.status(500).json({ message: "Error en el login", error });
@@ -65,7 +73,7 @@ router.post("/login", async (req, res) => {
 });
 
 // Logout
-router.post("/logout", (req, res) => {
+router.get("/logout", (req, res) => {
     res.clearCookie("token");
     res.json({ message: "Sesión cerrada" });
 });

@@ -2,6 +2,7 @@ import { ProductRepository } from "../dao/repositories/ProductRepository.js";
 
 const productRepo = new ProductRepository();
 
+
 export const getProducts = async (req, res) => {
     const products = await productRepo.getAll();
     res.json(products);

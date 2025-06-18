@@ -1,0 +1,137 @@
+<style>
+  /* Estilos del Header */
+  header {
+    background-color: #ffffff;
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
+    padding: 0 5%;
+  }
+
+  header nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 0;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  header nav a {
+    color: #333333;
+    text-decoration: none;
+    font-size: 1rem;
+    font-weight: 500;
+    margin-left: 1.5rem;
+    transition: all 0.3s ease;
+    padding: 0.5rem 0;
+    position: relative;
+  }
+
+  header nav a:first-child {
+    margin-left: 0;
+  }
+
+  header nav a:hover {
+    color: #4a90e2;
+  }
+
+  header nav a:hover::after {
+    width: 100%;
+  }
+
+  header nav a::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background-color: #4a90e2;
+    transition: width 0.3s ease;
+  }
+
+  header nav span {
+    color: #666666;
+    margin-left: 1.5rem;
+    font-size: 0.95rem;
+  }
+
+  .admin-link {
+    background-color: #4a90e2;
+    color: white !important;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    margin-left: 1.5rem;
+  }
+
+  .admin-link:hover {
+    background-color: #3a7bc8;
+  }
+
+  /* Espacio para el header */
+  body {
+    padding-top: 70px;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    header nav {
+      flex-direction: column;
+      padding: 0.5rem 0;
+    }
+
+    header nav a, header nav span {
+      margin: 0.5rem 0;
+      display: block;
+      text-align: center;
+    }
+
+    .admin-link {
+      margin: 0.5rem auto;
+    }
+
+    body {
+      padding-top: 150px;
+    }
+  }
+</style>
+
+<header>
+  <nav>
+    <a href="/">Inicio</a>
+    {{#if user}}
+      <a href="/cart">Carrito🛒</a>
+      {{#if isAdmin}}
+        <a href="/admin" class="admin-link">Admin Panel</a>
+      {{/if}}
+      <a href="#" id="logoutBtn">Cerrar Sesión</a>
+    {{else}}
+      <a href="/login">Iniciar Sesión</a>
+      <a href="/register">Registrarse</a>
+    {{/if}}
+  </nav>
+</header>
+
+<script>
+document.getElementById("logoutBtn").addEventListener("click", async (e) => {
+  e.preventDefault();
+  try {
+    const response = await fetch("/api/auth/logout", {
+      method: "GET",
+      credentials: "include" // Para enviar las cookies
+    });
+    if (response.ok) {
+      window.location.href = "/login";
+    } else {
+      alert("No se pudo cerrar sesión");
+    }
+  } catch (error) {
+    console.error("Error en logout:", error);
+    alert("Error en logout");
+  }
+});
+</script>

@@ -17,15 +17,18 @@ export class CartManager {
     }
   }
 
-  async getCartById(cartId) {
-    try {
-      const cart = await CartModel.findById(cartId).populate("products.productId");
-      return cart;
-    } catch (error) {
-      console.error("Error al obtener el carrito:", error);
-      throw new Error("Error al obtener el carrito");
-    }
+async getCartById(cartId) {
+  try {
+    return await CartModel.findById(cartId)
+      .populate({
+        path: 'products.productId',
+        model: 'Product'
+      });
+  } catch (error) {
+    console.error("Error al obtener el carrito:", error);
+    throw new Error("Error al obtener el carrito");
   }
+}
 
   async addProductToCart(cartId, productId, quantity = 1) {
     try {
@@ -154,5 +157,6 @@ export class CartManager {
       ticket,
       productsNotProcessed: productsWithoutStock,
     };
-}   
+}
+
 }
